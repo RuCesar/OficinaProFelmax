@@ -1,21 +1,23 @@
 import './index.css';
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import { Users, Car, Wrench, DollarSign, Archive, Menu, X, BarChart2, PlusCircle, LogOut, ClipboardList, Printer, Trash2, Edit, KeyRound, MinusCircle, FileText } from 'lucide-react';
+import { Users, Car, Wrench, DollarSign, Archive, Menu, X, BarChart2, PlusCircle, LogOut, ClipboardList, Printer, Trash2, Edit, KeyRound, MinusCircle, FileText, CheckCircle } from 'lucide-react';
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, getDocs, doc, setDoc, addDoc, deleteDoc, writeBatch, updateDoc, increment } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // =================================================================================
 // COLE AQUI A CONFIGURAÇÃO DO SEU FIREBASE
 // =================================================================================
 const firebaseConfig = {
-  apiKey: "AIzaSyDbHnxLOLJgTmoQyrqQm7TRqC_dNB1C4yY",
-  authDomain: "oficinaprofelmax.firebaseapp.com",
-  projectId: "oficinaprofelmax",
-  storageBucket: "oficinaprofelmax.firebasestorage.app",
-  messagingSenderId: "932907075204",
-  appId: "1:932907075204:web:1645d0eb775d47c9a2e4d1"
+  apiKey: "COLE_SUA_API_KEY_AQUI",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  projectId: "SEU_PROJETO_ID",
+  storageBucket: "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SEU_SENDER_ID",
+  appId: "SEU_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -26,7 +28,6 @@ function LoginScreen({ onLogin }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
@@ -38,23 +39,7 @@ function LoginScreen({ onLogin }) {
             console.error("Erro de login:", err);
         }
     };
-
-    return (
-        <div className="flex items-center justify-center h-screen bg-gray-100">
-            <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-lg">
-                <div className="text-center">
-                    <h1 className="text-3xl font-bold text-blue-600">OficinaPRO</h1>
-                    <p className="mt-2 text-gray-500">Acesso restrito</p>
-                </div>
-                <form className="space-y-6" onSubmit={handleLogin}>
-                    <div><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 text-gray-700 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Email" required /></div>
-                    <div><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 text-gray-700 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Senha" required /></div>
-                    {error && <p className="text-sm text-center text-red-500">{error}</p>}
-                    <div><button type="submit" className="w-full flex justify-center items-center px-4 py-3 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"><KeyRound className="w-5 h-5 mr-2" />Entrar</button></div>
-                </form>
-            </div>
-        </div>
-    );
+    return ( <div className="flex items-center justify-center h-screen bg-gray-100"> <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-lg"> <div className="text-center"> <h1 className="text-3xl font-bold text-blue-600">OficinaPRO</h1> <p className="mt-2 text-gray-500">Acesso restrito</p> </div> <form className="space-y-6" onSubmit={handleLogin}> <div><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 text-gray-700 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Email" required /></div> <div><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 text-gray-700 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Senha" required /></div> {error && <p className="text-sm text-center text-red-500">{error}</p>} <div><button type="submit" className="w-full flex justify-center items-center px-4 py-3 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"><KeyRound className="w-5 h-5 mr-2" />Entrar</button></div> </form> </div> </div> );
 }
 
 function App() {
@@ -159,6 +144,17 @@ function App() {
       await loadAllData();
   };
 
+  const handleFinishService = async (serviceId) => {
+    if (window.confirm('Tem a certeza que deseja finalizar este serviço?')) {
+        setIsLoading(true);
+        try {
+            const serviceRef = doc(db, "services", serviceId);
+            await updateDoc(serviceRef, { status: "Concluído" });
+        } catch (error) { console.error("Erro ao finalizar serviço:", error); }
+        await loadAllData();
+    }
+  };
+
   const handleLogout = async () => { await signOut(auth); };
   const openModal = (type, data = null) => setModal({ type, data });
 
@@ -167,7 +163,7 @@ function App() {
 
   const renderView = () => {
     if (isLoading) return <div className="flex justify-center items-center h-full w-full"><p className="text-xl">A carregar dados do sistema...</p></div>;
-    const props = { clients, vehicles, services, budgets, expenses, inventory, openModal, handleDelete, handleApproveBudget, onSave: handleSave, handleUpdateInventoryQuantity };
+    const props = { clients, vehicles, services, budgets, expenses, inventory, openModal, handleDelete, handleApproveBudget, onSave: handleSave, handleUpdateInventoryQuantity, handleFinishService };
     switch (activeView) {
       case 'dashboard': return <Dashboard {...props} />;
       case 'clients': return <Clients {...props} />;
@@ -185,51 +181,18 @@ function App() {
     if (!modal.type) return null;
     const commonProps = { onClose: () => setModal({type: null, data: null}), onSave: (data) => handleSave(modal.type, data) };
     switch (modal.type) {
-        case 'budgets': return <BudgetEditor budget={modal.data} clients={clients} vehicles={vehicles} {...commonProps} />;
-        case 'clients': return <ClientEditor client={modal.data} {...commonProps} />;
-        case 'vehicles': return <VehicleEditor vehicle={modal.data} clients={clients} {...commonProps} />;
+        case 'budget': return <BudgetEditor budget={modal.data} clients={clients} vehicles={vehicles} {...commonProps} />;
+        case 'client': return <ClientEditor client={modal.data} {...commonProps} />;
+        case 'vehicle': return <VehicleEditor vehicle={modal.data} clients={clients} {...commonProps} />;
         case 'inventory': return <InventoryEditor item={modal.data} {...commonProps} />;
+        case 'serviceDetails': return <ServiceDetailsModal service={modal.data} clients={clients} vehicles={vehicles} onClose={commonProps.onClose} />;
         default: return null;
     }
   };
 
   const NavItem = ({ view, icon, label }) => ( <li className={`flex items-center p-3 my-1 rounded-lg cursor-pointer transition-colors ${activeView === view ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700'}`} onClick={() => { setActiveView(view); setIsMenuOpen(false); }}> {icon} <span className="ml-4 font-medium">{label}</span> </li> );
 
-  return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 font-sans">
-      <aside className={`bg-white dark:bg-gray-800 text-gray-800 dark:text-white w-64 fixed inset-y-0 left-0 transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out z-40 shadow-lg lg:shadow-none`}>
-        <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">OficinaPRO</h1>
-          <button className="lg:hidden text-gray-500" onClick={() => setIsMenuOpen(false)}><X size={24} /></button>
-        </div>
-        <nav className="p-4">
-          <ul>
-            <NavItem view="dashboard" icon={<BarChart2 size={20} />} label="Dashboard" />
-            <NavItem view="clients" icon={<Users size={20} />} label="Clientes" />
-            <NavItem view="vehicles" icon={<Car size={20} />} label="Veículos" />
-            <NavItem view="services" icon={<Wrench size={20} />} label="Ordens de Serviço" />
-            <NavItem view="budgets" icon={<ClipboardList size={20} />} label="Orçamentos" />
-            <NavItem view="inventory" icon={<Archive size={20} />} label="Estoque" />
-            <NavItem view="finance" icon={<DollarSign size={20} />} label="Financeiro" />
-            <NavItem view="reports" icon={<FileText size={20} />} label="Relatórios" />
-          </ul>
-        </nav>
-        <div className="absolute bottom-0 w-full p-4 border-t border-gray-200 dark:border-gray-700">
-            <button onClick={handleLogout} className="w-full flex items-center p-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700">
-                <LogOut size={20} /> <span className="ml-4 font-medium">Sair</span>
-            </button>
-        </div>
-      </aside>
-      <main className="flex-1 flex flex-col">
-        <header className="bg-white dark:bg-gray-800 shadow-md p-4 flex justify-between items-center lg:justify-end z-30">
-          <button className="lg:hidden text-gray-600 dark:text-gray-300" onClick={() => setIsMenuOpen(true)}><Menu size={28} /></button>
-          <div className="flex items-center"><span className="mr-4 text-gray-700 dark:text-gray-200">Bem-vindo, {user.email}!</span></div>
-        </header>
-        <div className="flex-1 p-4 md:p-8 overflow-y-auto">{renderView()}</div>
-      </main>
-      {renderModal()}
-    </div>
-  );
+  return ( <div className="flex h-screen bg-gray-100 dark:bg-gray-900 font-sans"> <aside className={`bg-white dark:bg-gray-800 text-gray-800 dark:text-white w-64 fixed inset-y-0 left-0 transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out z-40 shadow-lg lg:shadow-none`}> <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center"> <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">OficinaPRO</h1> <button className="lg:hidden text-gray-500" onClick={() => setIsMenuOpen(false)}><X size={24} /></button> </div> <nav className="p-4"> <ul> <NavItem view="dashboard" icon={<BarChart2 size={20} />} label="Dashboard" /> <NavItem view="clients" icon={<Users size={20} />} label="Clientes" /> <NavItem view="vehicles" icon={<Car size={20} />} label="Veículos" /> <NavItem view="services" icon={<Wrench size={20} />} label="Ordens de Serviço" /> <NavItem view="budgets" icon={<ClipboardList size={20} />} label="Orçamentos" /> <NavItem view="inventory" icon={<Archive size={20} />} label="Estoque" /> <NavItem view="finance" icon={<DollarSign size={20} />} label="Financeiro" /> <NavItem view="reports" icon={<FileText size={20} />} label="Relatórios" /> </ul> </nav> <div className="absolute bottom-0 w-full p-4 border-t border-gray-200 dark:border-gray-700"> <button onClick={handleLogout} className="w-full flex items-center p-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700"> <LogOut size={20} /> <span className="ml-4 font-medium">Sair</span> </button> </div> </aside> <main className="flex-1 flex flex-col"> <header className="bg-white dark:bg-gray-800 shadow-md p-4 flex justify-between items-center lg:justify-end z-30"> <button className="lg:hidden text-gray-600 dark:text-gray-300" onClick={() => setIsMenuOpen(true)}><Menu size={28} /></button> <div className="flex items-center"><span className="mr-4 text-gray-700 dark:text-gray-200">Bem-vindo, {user.email}!</span></div> </header> <div className="flex-1 p-4 md:p-8 overflow-y-auto">{renderView()}</div> </main> {renderModal()} </div> );
 }
 
 function Dashboard({ clients, vehicles, services, budgets }) {
@@ -246,29 +209,29 @@ function GenericView({ title, columns, data, renderRow, onAddItem, children }) {
 
 function Clients({ clients, openModal, handleDelete }) {
   const columns = ['Nome', 'Telefone', 'Email'];
-  const renderRow = (client) => ( <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50"> <td className="p-4 text-gray-800 dark:text-gray-200">{client.name}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{client.phone}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{client.email}</td> <td className="p-4 text-right space-x-2"> <button onClick={() => openModal('clients', client)} className="text-blue-500 hover:text-blue-700 p-1"><Edit size={18}/></button> <button onClick={() => handleDelete('clients', client.id)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={18}/></button> </td> </tr> );
-  return <GenericView title="Clientes" columns={columns} data={clients} renderRow={renderRow} onAddItem={() => openModal('clients')} />;
+  const renderRow = (client) => ( <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50"> <td className="p-4 text-gray-800 dark:text-gray-200">{client.name}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{client.phone}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{client.email}</td> <td className="p-4 text-right space-x-2"> <button onClick={() => openModal('client', client)} className="text-blue-500 hover:text-blue-700 p-1"><Edit size={18}/></button> <button onClick={() => handleDelete('clients', client.id)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={18}/></button> </td> </tr> );
+  return <GenericView title="Clientes" columns={columns} data={clients} renderRow={renderRow} onAddItem={() => openModal('client')} />;
 }
 
 function Vehicles({ vehicles, clients, openModal, handleDelete }) {
   const columns = ['Modelo', 'Ano', 'Placa', 'Cliente'];
-  const renderRow = (vehicle) => { const client = clients.find(c => c.id === vehicle.clientId); return ( <tr key={vehicle.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50"> <td className="p-4 text-gray-800 dark:text-gray-200">{vehicle.model}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{vehicle.year}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{vehicle.plate}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{client ? client.name : 'N/A'}</td> <td className="p-4 text-right space-x-2"> <button onClick={() => openModal('vehicles', vehicle)} className="text-blue-500 hover:text-blue-700 p-1"><Edit size={18}/></button> <button onClick={() => handleDelete('vehicles', vehicle.id)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={18}/></button> </td> </tr> ); };
-  return <GenericView title="Veículos" columns={columns} data={vehicles} renderRow={renderRow} onAddItem={() => openModal('vehicles')} />;
+  const renderRow = (vehicle) => { const client = clients.find(c => c.id === vehicle.clientId); return ( <tr key={vehicle.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50"> <td className="p-4 text-gray-800 dark:text-gray-200">{vehicle.model}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{vehicle.year}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{vehicle.plate}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{client ? client.name : 'N/A'}</td> <td className="p-4 text-right space-x-2"> <button onClick={() => openModal('vehicle', vehicle)} className="text-blue-500 hover:text-blue-700 p-1"><Edit size={18}/></button> <button onClick={() => handleDelete('vehicles', vehicle.id)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={18}/></button> </td> </tr> ); };
+  return <GenericView title="Veículos" columns={columns} data={vehicles} renderRow={renderRow} onAddItem={() => openModal('vehicle')} />;
 }
 
-function Services({ services, clients, vehicles }) {
+function Services({ services, clients, vehicles, openModal, handleFinishService }) {
   const [selectedClientId, setSelectedClientId] = useState('');
   const getClientName = (vehicleId) => { const vehicle = vehicles.find(v => v.id === vehicleId); const client = clients.find(c => c.id === vehicle?.clientId); return client?.name || 'N/A'; };
   const filteredServices = services.filter(service => { if (!selectedClientId) return true; const vehicle = vehicles.find(v => v.id === service.vehicleId); return vehicle?.clientId === selectedClientId; });
   const columns = ['O.S #', 'Cliente', 'Veículo', 'Data', 'Preço', 'Status'];
-  const renderRow = (service) => ( <tr key={service.id}> <td className="p-4 font-bold">#{service.budgetId.substring(0,5)}</td> <td>{getClientName(service.vehicleId)}</td> <td>{service.vehicleModel}</td> <td>{service.date}</td> <td>R$ {service.totalPrice.toFixed(2)}</td> <td><span className={`px-3 py-1 text-sm font-medium rounded-full ${service.status === 'Concluído' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{service.status}</span></td> <td className="p-4 text-right"><button className="text-blue-500 hover:text-blue-700">Detalhes</button></td> </tr> );
+  const renderRow = (service) => ( <tr key={service.id}> <td className="p-4 font-bold">#{service.budgetId.substring(0,5)}</td> <td>{getClientName(service.vehicleId)}</td> <td>{service.vehicleModel}</td> <td>{service.date}</td> <td>R$ {service.totalPrice.toFixed(2)}</td> <td><span className={`px-3 py-1 text-sm font-medium rounded-full ${service.status === 'Concluído' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{service.status}</span></td> <td className="p-4 text-right space-x-2"> <button onClick={() => openModal('serviceDetails', service)} className="text-blue-500 hover:text-blue-700">Detalhes</button> {service.status === 'Em andamento' && <button onClick={() => handleFinishService(service.id)} className="text-green-500 hover:text-green-700">Finalizar</button>} </td> </tr> );
   return ( <GenericView title="Ordens de Serviço" columns={columns} data={filteredServices} renderRow={renderRow}> <div className="mb-4"> <label className="mr-2">Filtrar por Cliente:</label> <select value={selectedClientId} onChange={e => setSelectedClientId(e.target.value)} className="p-2 border rounded-md"> <option value="">Todos os Clientes</option> {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)} </select> </div> </GenericView> );
 }
 
 function Budgets({ budgets, clients, vehicles, handleApproveBudget, openModal, handleDelete }) {
     const columns = ['Orçamento #', 'Cliente', 'Veículo', 'Data', 'Valor Total', 'Status'];
-    const renderRow = (budget) => { const client = clients.find(c => c.id === budget.clientId); const vehicle = vehicles.find(v => v.id === budget.vehicleId); return ( <tr key={budget.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50"> <td className="p-4 text-gray-800 dark:text-gray-200 font-bold">#{budget.id.substring(0,5)}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{client ? client.name : 'N/A'}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{vehicle ? `${vehicle.model} (${vehicle.plate})` : 'N/A'}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{budget.date}</td> <td className="p-4 text-gray-600 dark:text-gray-300">R$ {budget.totalAmount.toFixed(2)}</td> <td className="p-4"><span className={`px-3 py-1 text-sm font-medium rounded-full ${budget.status === 'Aprovado' ? 'bg-green-100 text-green-800' : budget.status === 'Pendente' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{budget.status}</span></td> <td className="p-4 text-right space-x-2"> <button onClick={() => openModal('budgets', budget)} className="text-blue-500 hover:text-blue-700 p-1">Ver/Imprimir</button> {budget.status === 'Pendente' && <button onClick={() => handleApproveBudget(budget)} className="text-green-500 hover:text-green-700 p-1">Aprovar</button>} <button onClick={() => handleDelete('budgets', budget.id)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={18}/></button> </td> </tr> ); };
-    return <GenericView title="Orçamentos" columns={columns} data={budgets} renderRow={renderRow} onAddItem={() => openModal('budgets')} />;
+    const renderRow = (budget) => { const client = clients.find(c => c.id === budget.clientId); const vehicle = vehicles.find(v => v.id === budget.vehicleId); return ( <tr key={budget.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50"> <td className="p-4 text-gray-800 dark:text-gray-200 font-bold">#{budget.id.substring(0,5)}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{client ? client.name : 'N/A'}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{vehicle ? `${vehicle.model} (${vehicle.plate})` : 'N/A'}</td> <td className="p-4 text-gray-600 dark:text-gray-300">{budget.date}</td> <td className="p-4 text-gray-600 dark:text-gray-300">R$ {budget.totalAmount.toFixed(2)}</td> <td className="p-4"><span className={`px-3 py-1 text-sm font-medium rounded-full ${budget.status === 'Aprovado' ? 'bg-green-100 text-green-800' : budget.status === 'Pendente' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{budget.status}</span></td> <td className="p-4 text-right space-x-2"> <button onClick={() => openModal('budget', budget)} className="text-blue-500 hover:text-blue-700 p-1">Ver/Imprimir</button> {budget.status === 'Pendente' && <button onClick={() => handleApproveBudget(budget)} className="text-green-500 hover:text-green-700 p-1">Aprovar</button>} <button onClick={() => handleDelete('budgets', budget.id)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={18}/></button> </td> </tr> ); };
+    return <GenericView title="Orçamentos" columns={columns} data={budgets} renderRow={renderRow} onAddItem={() => openModal('budget')} />;
 }
 
 function Finance({ services, expenses, onSave, handleDelete }) {
@@ -323,6 +286,7 @@ function InventoryEditor({ item, onSave, onClose }) {
 
 function BudgetEditor({ budget, clients, vehicles, onSave, onClose }) {
   const [currentBudget, setCurrentBudget] = useState(null);
+  const budgetPDFRef = useRef();
   useEffect(() => {
     setCurrentBudget(budget ? {...budget} : { id: null, clientId: '', vehicleId: '', date: new Date().toISOString().split('T')[0], status: 'Pendente', items: [{ id: Date.now(), qty: 1, desc: '', price: 0 }], totalAmount: 0 });
   }, [budget]);
@@ -331,10 +295,42 @@ function BudgetEditor({ budget, clients, vehicles, onSave, onClose }) {
   const removeItem = (itemId) => updateBudgetItems(currentBudget.items.filter(item => item.id !== itemId));
   const updateBudgetItems = (items) => { const totalAmount = items.reduce((acc, item) => acc + ((item.qty || 0) * (item.price || 0)), 0); setCurrentBudget(prev => ({ ...prev, items, totalAmount })); };
   const handleClientChange = (clientId) => setCurrentBudget(prev => ({ ...prev, clientId: clientId, vehicleId: '' }));
-  const generatePDF = () => alert("A geração de PDF será configurada no ambiente de produção final.");
+  const generatePDF = () => {
+      const input = budgetPDFRef.current;
+      html2canvas(input, { scale: 2 }).then(canvas => {
+          const imgData = canvas.toDataURL('image/png');
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+          pdf.save(`orcamento-${currentBudget.id?.substring(0,5) || 'novo'}.pdf`);
+      });
+  };
   if (!currentBudget) return null;
   const filteredVehicles = vehicles.filter(v => v.clientId === currentBudget.clientId);
-  return ( <Modal title={budget ? 'Editar Orçamento' : 'Novo Orçamento'} onClose={onClose}> <div className="p-6 overflow-y-auto"> <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6"> <div><label>Cliente</label><select value={currentBudget.clientId} onChange={(e) => handleClientChange(e.target.value)} className="w-full mt-1 p-2 border rounded-md" required><option value="">Selecione</option>{clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div> <div><label>Veículo</label><select value={currentBudget.vehicleId} onChange={(e) => setCurrentBudget(prev => ({...prev, vehicleId: e.target.value}))} className="w-full mt-1 p-2 border rounded-md" disabled={!currentBudget.clientId} required><option value="">Selecione</option>{filteredVehicles.map(v => <option key={v.id} value={v.id}>{`${v.model} - ${v.plate}`}</option>)}</select></div> </div> <div className="space-y-2"> {currentBudget.items.map(item => ( <div key={item.id} className="grid grid-cols-12 gap-2 items-center"> <input type="text" value={item.desc} onChange={e => handleItemChange(item.id, 'desc', e.target.value)} placeholder="Descrição" className="col-span-5 p-2 border rounded-md" /> <input type="number" value={item.qty} onChange={e => handleItemChange(item.id, 'qty', parseFloat(e.target.value) || 0)} className="col-span-2 text-center p-2 border rounded-md" /> <input type="number" value={item.price} onChange={e => handleItemChange(item.id, 'price', parseFloat(e.target.value) || 0)} className="col-span-2 p-2 border rounded-md" /> <span className="col-span-2 p-2 text-right">R$ {((item.qty || 0) * (item.price || 0)).toFixed(2)}</span> <button onClick={() => removeItem(item.id)} className="col-span-1 text-red-500 hover:text-red-700 flex justify-center"><Trash2 size={18}/></button> </div> ))} <button onClick={addItem} className="text-blue-500 hover:text-blue-700 mt-2">+ Adicionar Item</button> </div> <div className="mt-6 text-right"><p className="text-2xl font-bold text-gray-800 dark:text-white">Total: R$ {currentBudget.totalAmount.toFixed(2)}</p></div> </div> <div className="p-4 bg-gray-50 dark:bg-gray-900 border-t dark:border-gray-700 flex justify-end space-x-3"> <button onClick={generatePDF} className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"><Printer size={18} className="mr-2"/> Imprimir / PDF</button> <button onClick={() => onSave(currentBudget)} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button> </div> </Modal> );
+  return ( <Modal title={budget ? 'Editar Orçamento' : 'Novo Orçamento'} onClose={onClose}> <div className="p-6 overflow-y-auto" ref={budgetPDFRef}> <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6"> <div><label>Cliente</label><select value={currentBudget.clientId} onChange={(e) => handleClientChange(e.target.value)} className="w-full mt-1 p-2 border rounded-md" required><option value="">Selecione</option>{clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div> <div><label>Veículo</label><select value={currentBudget.vehicleId} onChange={(e) => setCurrentBudget(prev => ({...prev, vehicleId: e.target.value}))} className="w-full mt-1 p-2 border rounded-md" disabled={!currentBudget.clientId} required><option value="">Selecione</option>{filteredVehicles.map(v => <option key={v.id} value={v.id}>{`${v.model} - ${v.plate}`}</option>)}</select></div> </div> <div className="space-y-2"> {currentBudget.items.map(item => ( <div key={item.id} className="grid grid-cols-12 gap-2 items-center"> <input type="text" value={item.desc} onChange={e => handleItemChange(item.id, 'desc', e.target.value)} placeholder="Descrição" className="col-span-5 p-2 border rounded-md" /> <input type="number" value={item.qty} onChange={e => handleItemChange(item.id, 'qty', parseFloat(e.target.value) || 0)} className="col-span-2 text-center p-2 border rounded-md" /> <input type="number" value={item.price} onChange={e => handleItemChange(item.id, 'price', parseFloat(e.target.value) || 0)} className="col-span-2 p-2 border rounded-md" /> <span className="col-span-2 p-2 text-right">R$ {((item.qty || 0) * (item.price || 0)).toFixed(2)}</span> <button onClick={() => removeItem(item.id)} className="col-span-1 text-red-500 hover:text-red-700 flex justify-center"><Trash2 size={18}/></button> </div> ))} <button onClick={addItem} className="text-blue-500 hover:text-blue-700 mt-2">+ Adicionar Item</button> </div> <div className="mt-6 text-right"><p className="text-2xl font-bold text-gray-800 dark:text-white">Total: R$ {currentBudget.totalAmount.toFixed(2)}</p></div> </div> <div className="p-4 bg-gray-50 dark:bg-gray-900 border-t dark:border-gray-700 flex justify-end space-x-3"> <button onClick={generatePDF} className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"><Printer size={18} className="mr-2"/> Imprimir / PDF</button> <button onClick={() => onSave(currentBudget)} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button> </div> </Modal> );
+}
+
+function ServiceDetailsModal({ service, clients, vehicles, onClose }) {
+    const getClientName = (vehicleId) => { const vehicle = vehicles.find(v => v.id === vehicleId); const client = clients.find(c => c.id === vehicle?.clientId); return client || null; };
+    const client = getClientName(service.vehicleId);
+    return (
+        <Modal title={`Detalhes da O.S. #${service.budgetId.substring(0,5)}`} onClose={onClose}>
+            <div className="p-6 space-y-4">
+                <div><strong>Cliente:</strong> {client?.name}</div>
+                <div><strong>Veículo:</strong> {service.vehicleModel}</div>
+                <div><strong>Data:</strong> {service.date}</div>
+                <div><strong>Status:</strong> {service.status}</div>
+                <h4 className="font-bold mt-4">Itens do Serviço:</h4>
+                <ul className="list-disc list-inside">
+                    {service.items.map(item => (
+                        <li key={item.id}>{item.qty}x {item.desc} - R$ {(item.price * item.qty).toFixed(2)}</li>
+                    ))}
+                </ul>
+                <div className="text-right font-bold text-xl">Total: R$ {service.totalPrice.toFixed(2)}</div>
+            </div>
+        </Modal>
+    );
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
