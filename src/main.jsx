@@ -8,7 +8,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 
 // =================================================================================
 // COLE AQUI A CONFIGURAÇÃO DO SEU FIREBASE
-// =================================================================================
+// ================================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDbHnxLOLJgTmoQyrqQm7TRqC_dNB1C4yY",
   authDomain: "oficinaprofelmax.firebaseapp.com",
