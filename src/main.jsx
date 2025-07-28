@@ -1,3 +1,4 @@
+import './index.css'; // <-- ESTA É A LINHA NOVA E IMPORTANTE
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { Users, Car, Wrench, DollarSign, Archive, Menu, X, BarChart2, PlusCircle, LogOut, ClipboardList, Printer, Trash2, Edit } from 'lucide-react';
